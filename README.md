@@ -42,5 +42,4 @@ node scraper.py
 
 Add:
 
-- return json file instead of just logging
-- robust error handling
+- fix program not exiting to terminal after error
