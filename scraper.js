@@ -143,6 +143,7 @@ const rl = readline.createInterface({
 rl.question('Enter the company’s website URL: ', async (url) => {
   url = 'http://' + url;
   const data = await scrapeWebsite(url);
-  console.log(data);
   rl.close();
+  console.log(data);
+  return data;
 });
