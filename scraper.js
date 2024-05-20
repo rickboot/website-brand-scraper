@@ -1,14 +1,20 @@
 import OpenAI from 'openai';
-import readline from 'readline';
 import { chromium } from 'playwright';
 import env from 'dotenv/config';
+import readline from 'readline';
+
+if (env.OPENAI_API_KEY === 'undefined') {
+  console.log('Create .env file with OPENAI_API_KEY=""');
+  process.exit(1);
+}
 
 const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
 async function analyzeText(text, promptText) {
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-3.5-turbo',
+      // model: 'gpt-4',
       messages: [
         { role: 'system', content: 'You are an expert content analyzer.' },
         { role: 'user', content: promptText + text },
@@ -41,10 +47,19 @@ async function scrapeWebsite(url) {
 
     const logoUrls = await page.$$eval(
       'img[alt*="logo"], img[src*="logo"], span[class*="logo"] svg',
-      (elements) => elements.map((el) => el.getAttribute('src'))
+      (elements) =>
+        elements.map((el) => {
+          let url = el.getAttribute('src') || el.getAttribute('href');
+          if (!url) {
+            // Serialize inline SVG and convert to data URL
+            const svg = new XMLSerializer().serializeToString(el);
+            url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+          }
+          return url;
+        })
     );
 
-    const brandColors = await page.$$eval('button, h1', (elements) => {
+    const brandColors = await page.$$eval('button, h1, h2, a', (elements) => {
       function colorToHex(color) {
         if (color.startsWith('#')) return color;
         color = color.replace(/\s/g, '').toLowerCase();
@@ -61,10 +76,10 @@ async function scrapeWebsite(url) {
 
       const colors = [];
       elements.forEach((el) => {
-        const color = colorToHex(window.getComputedStyle(el).color);
         const bgColor = colorToHex(window.getComputedStyle(el).backgroundColor);
-        if (color && !colors.includes(color)) colors.push(color);
+        const color = colorToHex(window.getComputedStyle(el).color);
         if (bgColor && !colors.includes(bgColor)) colors.push(bgColor);
+        if (color && !colors.includes(color)) colors.push(color);
       });
       return colors;
     });
@@ -107,7 +122,7 @@ async function scrapeWebsite(url) {
       websiteUrl: url,
       logoUrls,
       brandColors,
-      imageUrls,
+      // imageUrls,
       ogTitle,
       ogDescription,
       writingStyle,
