@@ -1,14 +1,17 @@
 import OpenAI from 'openai';
 import { chromium } from 'playwright';
-import env from 'dotenv/config';
-import readline from 'readline';
+import dotenv from 'dotenv';
+import readlineSync from 'readline-sync';
 
-if (env.OPENAI_API_KEY === 'undefined') {
+// Load environment variables
+dotenv.config();
+
+if (!process.env.OPENAI_API_KEY) {
   console.log('Create .env file with OPENAI_API_KEY=""');
   process.exit(1);
 }
 
-const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 async function analyzeText(text, promptText) {
   try {
@@ -28,11 +31,13 @@ async function analyzeText(text, promptText) {
 }
 
 async function scrapeWebsite(url) {
+  let browser;
   try {
-    const browser = await chromium.launch();
+    browser = await chromium.launch();
     const context = await browser.newContext();
     const page = await context.newPage();
-    await page.goto(url);
+
+    await page.goto(url, { timeout: 30000, waitUntil: 'domcontentloaded' });
 
     const companyName = await page
       .$eval('meta[property="og:site_name"]', (el) =>
@@ -51,7 +56,7 @@ async function scrapeWebsite(url) {
         elements.map((el) => {
           let url = el.getAttribute('src') || el.getAttribute('href');
           if (!url) {
-            // Serialize inline SVG and convert to data URL
+            // Assume inline SVG - serialize and convert to data url
             const svg = new XMLSerializer().serializeToString(el);
             url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
           }
@@ -120,39 +125,32 @@ async function scrapeWebsite(url) {
     return {
       companyName,
       websiteUrl: url,
-      logoUrls,
-      brandColors,
-      // imageUrls,
       ogTitle,
       ogDescription,
+      logoUrls,
+      imageUrls,
+      socialMediaLinks,
+      brandColors,
       writingStyle,
       targetAudience,
-      socialMediaLinks,
     };
   } catch (error) {
-    console.error('Error scraping the website:', error.message);
-    return null;
+    console.error(error.message);
+    if (browser) {
+      await browser.close();
+    }
   }
 }
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
-async function getUserInput() {
-  return new Promise((resolve, reject) => {
-    rl.question('Enter the company’s website URL: ', (url) => {
-      resolve(url);
-    });
-  });
-}
-
 async function main() {
-  const url = await getUserInput();
+  const url = readlineSync.question('Enter the company’s website URL: ');
+
   const data = await scrapeWebsite(url);
-  console.log(data);
-  rl.close();
+  if (data) {
+    console.log(data);
+  } else {
+    console.log('Failed to scrape website.');
+  }
 }
 
 main();
