@@ -51,7 +51,7 @@ async function scrapeWebsite(url) {
     );
 
     const logoUrls = await page.$$eval(
-      'img[alt*="logo"], img[src*="logo"], span[class*="logo"] svg',
+      'img[alt*="logo"], img[src*="logo"], img[class*="logo"],span[class*="logo"] svg',
       (elements) =>
         elements.map((el) => {
           let url = el.getAttribute('src') || el.getAttribute('href');
@@ -112,11 +112,11 @@ async function scrapeWebsite(url) {
     const [writingStyle, targetAudience] = await Promise.all([
       analyzeText(
         pageText,
-        'Analyze the writing style of the following text. Describe elements such as tone, voice, syntax, diction, and any notable literary devices or techniques used. Provide an overview of how these elements contribute to the overall impact and effectiveness of the paragraph in 20 words or less.'
+        'Analyze the writing style of the following text. Describe elements such as tone, voice, syntax, diction, and any notable literary devices or techniques used. Provide an overview of how these elements contribute to the overall impact and effectiveness of the paragraph in 30 words or less.'
       ),
       analyzeText(
         pageText,
-        'Identify the target audience of the following text in less than 20 words:\n\n'
+        'Analyze the following text and identify the target audience of the company in 30 words or less. Consider factors like demographics (age, income, location), interests, and needs.:\n\n'
       ),
     ]);
 
